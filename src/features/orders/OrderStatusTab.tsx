@@ -10,6 +10,8 @@ import {
   createWorkOrders,
   updateOrdersStatus,
 } from './workOrderActions'
+import { createClaimOrder } from './claimActions'
+import ClaimModal from './ClaimModal'
 
 interface Props {
   status: OrderStatus
@@ -33,6 +35,7 @@ export default function OrderStatusTab({
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [busy, setBusy] = useState(false)
   const [woQty, setWoQty] = useState(0)
+  const [claimOrder, setClaimOrder] = useState<Order | null>(null)
 
   // แท็บ "เสร็จสิ้น" ต้องไม่แสดงบิลที่แพ็ค/ส่งแล้ว
   const baseOrders = useMemo(() => {
@@ -155,6 +158,33 @@ export default function OrderStatusTab({
     }
   }
 
+  function openClaim() {
+    if (selected.size !== 1) return alert('กรุณาเลือกออร์เดอร์เพียง 1 รายการ')
+    const id = [...selected][0]
+    const order = orders.find((o) => o.id === id)
+    if (order) setClaimOrder(order)
+  }
+
+  async function doClaim(claimType: string, claimDetails: string) {
+    if (!claimOrder) return
+    setBusy(true)
+    try {
+      const billNo = await createClaimOrder(
+        claimOrder,
+        claimType,
+        claimDetails,
+        user?.username ?? user?.email ?? '',
+      )
+      setClaimOrder(null)
+      await refresh()
+      alert(`สร้างออร์เดอร์เคลมสำเร็จ!\nเลขบิล: ${billNo}\nไปที่แท็บ "รอลงข้อมูล"`)
+    } catch (e) {
+      alert('เกิดข้อผิดพลาด: ' + (e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const btn =
     'rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50'
 
@@ -238,6 +268,15 @@ export default function OrderStatusTab({
               ยกเลิกบิลที่เลือก
             </button>
           </>
+        )}
+        {status === 'จัดส่งแล้ว' && (
+          <button
+            disabled={busy}
+            onClick={openClaim}
+            className={btn + ' bg-red-600 hover:bg-red-700'}
+          >
+            🔧 สร้างเคลมจากบิลที่เลือก
+          </button>
         )}
         {status === 'ยกเลิก' && (
           <>
@@ -326,6 +365,15 @@ export default function OrderStatusTab({
           ))}
         </ul>
       </div>
+
+      {claimOrder && (
+        <ClaimModal
+          order={claimOrder}
+          busy={busy}
+          onClose={() => setClaimOrder(null)}
+          onSubmit={doClaim}
+        />
+      )}
     </div>
   )
 }
