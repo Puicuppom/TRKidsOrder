@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+:root {
+  font-family: "Sarabun", system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+/* ช่องกรอกใช้ line-height normal — Chrome เผื่อที่ให้สระไทยครบอยู่แล้ว */
+input,
+select,
+textarea {
+  line-height: normal;
+}
