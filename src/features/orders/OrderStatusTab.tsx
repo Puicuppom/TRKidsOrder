@@ -12,6 +12,7 @@ import {
 } from './workOrderActions'
 import { createClaimOrder } from './claimActions'
 import ClaimModal from './ClaimModal'
+import { exportShippedData, exportTrackingCsv } from './shippedExports'
 
 interface Props {
   status: OrderStatus
@@ -185,6 +186,22 @@ export default function OrderStatusTab({
     }
   }
 
+  function selectedShipped(): Order[] {
+    return orders.filter((o) => selected.has(o.id))
+  }
+  function doExportShipped() {
+    const sel = selectedShipped()
+    if (sel.length === 0) return alert('กรุณาเลือกออร์เดอร์ที่ต้องการ Export')
+    exportShippedData(sel)
+  }
+  function doExportTracking() {
+    const sel = selectedShipped()
+    if (sel.length === 0) return alert('กรุณาเลือกออร์เดอร์ที่ต้องการ Export')
+    const carrier = prompt('ระบุชื่อขนส่งสำหรับ CSV เลขพัสดุ:')?.trim()
+    if (!carrier) return
+    exportTrackingCsv(sel, carrier)
+  }
+
   const btn =
     'rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50'
 
@@ -270,13 +287,27 @@ export default function OrderStatusTab({
           </>
         )}
         {status === 'จัดส่งแล้ว' && (
-          <button
-            disabled={busy}
-            onClick={openClaim}
-            className={btn + ' bg-red-600 hover:bg-red-700'}
-          >
-            🔧 สร้างเคลมจากบิลที่เลือก
-          </button>
+          <>
+            <button
+              disabled={busy}
+              onClick={openClaim}
+              className={btn + ' bg-cyan-600 hover:bg-cyan-700'}
+            >
+              🔧 เคลมบิลที่เลือก
+            </button>
+            <button
+              onClick={doExportShipped}
+              className={btn + ' bg-green-600 hover:bg-green-700'}
+            >
+              📊 Export ข้อมูลที่เลือก
+            </button>
+            <button
+              onClick={doExportTracking}
+              className={btn + ' bg-violet-600 hover:bg-violet-700'}
+            >
+              📋 Export CSV เลขพัสดุ
+            </button>
+          </>
         )}
         {status === 'ยกเลิก' && (
           <>

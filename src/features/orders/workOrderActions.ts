@@ -122,24 +122,35 @@ export async function createWorkOrders(
       const batchNumber = (woData?.[0]?.batch_number ?? 0) + 1
       const workOrderName = `${channelCode}-${datePart}-R${batchNumber}`
 
+      // 1) จองบิลก่อน — อัปเดตเฉพาะบิลที่ยังเป็น 'ลงข้อมูลเสร็จสิ้น'
+      // (กันเคสตัดใบงานพร้อมกัน: ถ้าบิลถูกคนอื่นจองไปแล้วจะได้ 0 แถว)
+      const { data: claimed, error: updErr } = await supabase
+        .from('orders')
+        .update({ status: 'ใบงาน (กำลังผลิต)', work_order_name: workOrderName })
+        .in('id', ids)
+        .eq('status', 'ลงข้อมูลเสร็จสิ้น')
+        .select('id')
+      if (updErr) throw updErr
+      if (!claimed || claimed.length === 0) {
+        errors.push(`ช่องทาง ${channelCode}: บิลถูกตัดใบงานไปแล้ว (ไม่สร้างใบงานซ้ำ)`)
+        continue
+      }
+      const claimedIds = new Set(claimed.map((c) => c.id))
+      const claimedBills = bills.filter((b) => claimedIds.has(b.id))
+
+      // 2) สร้างใบงานจากบิลที่จองได้จริง
       const { error: woErr } = await supabase.from('work_orders').insert({
         work_order_name: workOrderName,
         channel_code: channelCode,
         production_date: workOrderDate,
         batch_number: batchNumber,
-        order_count: ids.length,
+        order_count: claimedBills.length,
         created_by: username,
         status: 'กำลังผลิต',
       })
       if (woErr) throw woErr
 
-      const { error: updErr } = await supabase
-        .from('orders')
-        .update({ status: 'ใบงาน (กำลังผลิต)', work_order_name: workOrderName })
-        .in('id', ids)
-      if (updErr) throw updErr
-
-      const qty = computeQty(bills, products)
+      const qty = computeQty(claimedBills, products)
       const cutTime = new Date().toLocaleTimeString('th-TH', {
         hour12: false,
         hour: '2-digit',
@@ -175,7 +186,9 @@ export async function createWorkOrders(
       })
       if (planErr) throw planErr
 
-      success.push(`สร้างใบงาน "${workOrderName}" (${ids.length} บิล) สำเร็จ`)
+      success.push(
+        `สร้างใบงาน "${workOrderName}" (${claimedBills.length} บิล) สำเร็จ`,
+      )
     } catch (e) {
       errors.push(`ช่องทาง ${channelCode}: ${(e as Error).message}`)
     }
