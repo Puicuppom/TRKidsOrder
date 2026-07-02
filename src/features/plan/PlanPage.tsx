@@ -7,6 +7,7 @@ import { createJobObject, deleteJob } from './planApi'
 import { supabase } from '../../lib/supabase'
 import JobForm from './JobForm'
 import PlanDashboard from './PlanDashboard'
+import PlanDepartments from './PlanDepartments'
 import type { PlanJob } from './planTypes'
 
 const LOCK_PASS = 'TRkids@999'
@@ -289,11 +290,14 @@ export default function PlanPage() {
           />
         ) : null)}
 
-      {(view === 'dept' || view === 'set') && (
+      {view === 'dept' &&
+        (settings ? (
+          <PlanDepartments settings={settings} jobs={jobs} date={date} onChanged={refresh} />
+        ) : null)}
+
+      {view === 'set' && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-400">
-          {view === 'dept' && 'หน้าแผนก (จับเวลาเริ่ม-จบงาน)'}
-          {view === 'set' && 'ตั้งค่า (แผนก/กระบวนการ/ไลน์/เวลาพัก)'}
-          {' — กำลังย้ายในเฟสถัดไป'}
+          ตั้งค่า (แผนก/กระบวนการ/ไลน์/เวลาพัก) — กำลังย้ายในเฟสถัดไป
         </p>
       )}
     </div>

@@ -90,6 +90,43 @@ export async function editActual(
   await updateJobField(job.id, updates)
 }
 
+// กดเริ่มงานแผนก (ตั้ง start ของ process แรก + ล็อกแผน)
+export async function startDeptWork(
+  settings: PlanSettings,
+  jobs: PlanJob[],
+  job: PlanJob,
+  dept: string,
+) {
+  const procs = (settings.processes[dept] || []).map((p) => p.name)
+  if (procs.length === 0) return
+  const tracks: PlanJob['tracks'] = JSON.parse(JSON.stringify(job.tracks || {}))
+  if (!tracks[dept]) tracks[dept] = {}
+  const first = procs[0]
+  if (!tracks[dept][first]) tracks[dept][first] = { start: null, end: null }
+  tracks[dept][first].start = new Date().toISOString()
+  const updates: Partial<PlanJob> = { tracks }
+  if (!job.locked_plans?.[dept]) {
+    const locked = computeLockedPlan(settings, jobs, job, dept)
+    if (locked) updates.locked_plans = { ...(job.locked_plans || {}), [dept]: locked }
+  }
+  await updateJobField(job.id, updates)
+}
+
+// กดจบงานแผนก (ปิดทุก process ด้วยเวลาปัจจุบัน)
+export async function finishDeptWork(settings: PlanSettings, job: PlanJob, dept: string) {
+  const procs = (settings.processes[dept] || []).map((p) => p.name)
+  if (procs.length === 0) return
+  const now = new Date().toISOString()
+  const tracks: PlanJob['tracks'] = JSON.parse(JSON.stringify(job.tracks || {}))
+  if (!tracks[dept]) tracks[dept] = {}
+  procs.forEach((p) => {
+    if (!tracks[dept][p]) tracks[dept][p] = { start: now, end: now }
+    if (!tracks[dept][p].start) tracks[dept][p].start = now
+    tracks[dept][p].end = now
+  })
+  await updateJobField(job.id, { tracks })
+}
+
 // บันทึกลำดับใหม่หลัง DnD
 export async function reorderJobs(orderedIds: string[]) {
   await saveJobOrder(orderedIds)
