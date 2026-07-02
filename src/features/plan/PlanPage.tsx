@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
+import { useAuth } from '../auth/useAuth'
 import { usePlanSettings, usePlanJobs } from './usePlan'
 import { createJobObject, deleteJob } from './planApi'
 import { supabase } from '../../lib/supabase'
@@ -16,9 +17,16 @@ type View = 'dash' | 'dept' | 'jobs' | 'form' | 'set'
 
 export default function PlanPage() {
   const qc = useQueryClient()
+  const { user } = useAuth()
+  const isSuper = user?.role === 'superadmin'
   const [date, setDate] = useState(today())
-  const [view, setView] = useState<View>('jobs')
-  const [unlocked, setUnlocked] = useState(false)
+  const [view, setView] = useState<View>('dash')
+  const [unlocked, setUnlocked] = useState(isSuper)
+
+  // superadmin ปลดล็อกอัตโนมัติ (ไม่ต้องใส่รหัส)
+  useEffect(() => {
+    if (isSuper) setUnlocked(true)
+  }, [isSuper])
   const [editing, setEditing] = useState<PlanJob | null>(null)
   const [search, setSearch] = useState('')
   const importRef = useRef<HTMLInputElement>(null)
@@ -126,14 +134,20 @@ export default function PlanPage() {
           onChange={(e) => setDate(e.target.value)}
           className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
         />
-        <button
-          onClick={toggleLock}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-            unlocked ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-700'
-          }`}
-        >
-          {unlocked ? '🔓 ปลดล็อกแล้ว' : '🔒 ล็อกอยู่ (กดปลดล็อก)'}
-        </button>
+        {isSuper ? (
+          <span className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white">
+            🔓 superadmin (แก้ไขได้)
+          </span>
+        ) : (
+          <button
+            onClick={toggleLock}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+              unlocked ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-700'
+            }`}
+          >
+            {unlocked ? '🔓 ปลดล็อกแล้ว' : '🔒 ล็อกอยู่ (กดปลดล็อก)'}
+          </button>
+        )}
         {isLoading && <span className="text-sm text-slate-400">กำลังโหลด...</span>}
       </div>
 

@@ -168,8 +168,8 @@ export default function PlanDashboard({ settings, jobs, date, unlocked, onChange
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="border-collapse text-xs">
+      <div className="-mx-6 overflow-x-auto border-y border-slate-200 bg-white">
+        <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-slate-100">
               <th className="border border-slate-200 p-1" rowSpan={2}></th>
