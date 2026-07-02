@@ -5,6 +5,7 @@ import { usePlanSettings, usePlanJobs } from './usePlan'
 import { createJobObject, deleteJob } from './planApi'
 import { supabase } from '../../lib/supabase'
 import JobForm from './JobForm'
+import PlanDashboard from './PlanDashboard'
 import type { PlanJob } from './planTypes'
 
 const LOCK_PASS = 'TRkids@999'
@@ -263,9 +264,19 @@ export default function PlanPage() {
           )
         ) : null)}
 
-      {(view === 'dash' || view === 'dept' || view === 'set') && (
+      {view === 'dash' &&
+        (settings ? (
+          <PlanDashboard
+            settings={settings}
+            jobs={jobs}
+            date={date}
+            unlocked={unlocked}
+            onChanged={refresh}
+          />
+        ) : null)}
+
+      {(view === 'dept' || view === 'set') && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-400">
-          {view === 'dash' && 'Dashboard + Master Plan (DnD/timeline)'}
           {view === 'dept' && 'หน้าแผนก (จับเวลาเริ่ม-จบงาน)'}
           {view === 'set' && 'ตั้งค่า (แผนก/กระบวนการ/ไลน์/เวลาพัก)'}
           {' — กำลังย้ายในเฟสถัดไป'}

@@ -252,6 +252,69 @@ export function computeAllTimelines(
   return all
 }
 
+const fmtLocalHHMM = (iso: string) => {
+  const d = new Date(iso)
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+export function getJobStatusForDept(
+  settings: PlanSettings,
+  job: PlanJob,
+  dept: string,
+): { text: string; key: 'pending' | 'progress' | 'done' } {
+  const procs = (settings.processes[dept] || []).map((p) => p.name)
+  const tracks = job.tracks[dept] || {}
+  if (procs.length === 0) return { text: 'รอดำเนินการ', key: 'pending' }
+  const completed = procs.filter((p) => tracks[p]?.end).length
+  if (completed === procs.length) return { text: 'เสร็จแล้ว', key: 'done' }
+  if (Object.values(tracks).some((t) => t.start)) {
+    const current =
+      procs.find((p) => tracks[p]?.start && !tracks[p]?.end) ||
+      procs.find((p) => !tracks[p]?.end)
+    return { text: current || 'กำลังทำ', key: 'progress' }
+  }
+  return { text: 'รอดำเนินการ', key: 'pending' }
+}
+
+export function getActualTimesForDept(
+  settings: PlanSettings,
+  job: PlanJob,
+  dept: string,
+): { actualStart: string; actualEnd: string } {
+  const tracks = job.tracks?.[dept] || {}
+  const procs = (settings.processes[dept] || []).map((p) => p.name)
+  if (procs.length === 0) return { actualStart: '-', actualEnd: '-' }
+  let firstStart: Date | null = null
+  let lastEnd: Date | null = null
+  let allFinished = true
+  for (const p of procs) {
+    if (tracks[p]?.start) {
+      const d = new Date(tracks[p].start!)
+      if (!firstStart || d < firstStart) firstStart = d
+    }
+    if (tracks[p]?.end) {
+      const d = new Date(tracks[p].end!)
+      if (!lastEnd || d > lastEnd) lastEnd = d
+    } else allFinished = false
+  }
+  return {
+    actualStart: firstStart ? fmtLocalHHMM(firstStart.toISOString()) : '-',
+    actualEnd: allFinished && lastEnd ? fmtLocalHHMM(lastEnd.toISOString()) : '-',
+  }
+}
+
+export function getOverallJobStatus(
+  settings: PlanSettings,
+  job: PlanJob,
+): 'pending' | 'progress' | 'done' {
+  const relevant = settings.departments.filter((d) => getEffectiveQty(job, d) > 0)
+  if (relevant.length === 0) return 'pending'
+  const keys = relevant.map((d) => getJobStatusForDept(settings, job, d).key)
+  if (keys.every((s) => s === 'done')) return 'done'
+  if (keys.some((s) => s === 'progress')) return 'progress'
+  return 'pending'
+}
+
 export function procStatus(track?: { start: string | null; end: string | null }) {
   if (!track?.start && !track?.end) return 'รอดำเนินการ'
   if (track?.start && !track?.end) return 'กำลังทำ'
