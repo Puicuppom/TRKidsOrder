@@ -1,6 +1,17 @@
 import { supabase } from '../../lib/supabase'
 import type { Order } from '../../types/db'
 
+// เคลมที่ยัง active (ไม่นับที่ยกเลิก) ของบิลต้นฉบับนี้ — ใช้เตือน "เคลมซ้ำ"
+export async function fetchActiveClaims(billNo: string): Promise<string[]> {
+  const originalBillNo = billNo.replace(/^C\d*-/, '')
+  const { data } = await supabase
+    .from('orders')
+    .select('bill_no')
+    .like('bill_no', `C%-${originalBillNo}`)
+    .neq('status', 'ยกเลิก')
+  return (data ?? []).map((d) => d.bill_no as string)
+}
+
 // ประเภทเคลมที่เคยใช้ (สำหรับ dropdown)
 export async function fetchClaimTypes(): Promise<string[]> {
   const { data } = await supabase
@@ -20,11 +31,12 @@ export async function createClaimOrder(
 ): Promise<string> {
   const originalBillNo = order.bill_no.replace(/^C\d*-/, '')
 
-  // นับบิลเคลมเดิมของบิลนี้
+  // นับบิลเคลมเดิมของบิลนี้ (ไม่นับที่ยกเลิก → เคลมที่ถูกยกเลิกจะไม่ทำให้เลขเดินเป็น C2)
   const { data: existing } = await supabase
     .from('orders')
     .select('bill_no')
     .like('bill_no', `C%-${originalBillNo}`)
+    .neq('status', 'ยกเลิก')
   const n = (existing?.length ?? 0) + 1
   const newBillNo = `C${n}-${originalBillNo}`
 

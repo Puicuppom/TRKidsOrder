@@ -10,7 +10,7 @@ import {
   createWorkOrders,
   updateOrdersStatus,
 } from './workOrderActions'
-import { createClaimOrder } from './claimActions'
+import { createClaimOrder, fetchActiveClaims } from './claimActions'
 import ClaimModal from './ClaimModal'
 import { exportShippedData, exportTrackingCsv } from './shippedExports'
 
@@ -159,11 +159,22 @@ export default function OrderStatusTab({
     }
   }
 
-  function openClaim() {
+  async function openClaim() {
     if (selected.size !== 1) return alert('กรุณาเลือกออร์เดอร์เพียง 1 รายการ')
     const id = [...selected][0]
     const order = orders.find((o) => o.id === id)
-    if (order) setClaimOrder(order)
+    if (!order) return
+    // เตือนถ้าบิลนี้มีเคลมที่ยัง active (ไม่นับที่ยกเลิก)
+    const active = await fetchActiveClaims(order.bill_no)
+    if (active.length > 0) {
+      if (
+        !confirm(
+          `⚠️ บิลนี้เคยเคลมไปแล้ว: ${active.join(', ')}\nต้องการสร้างเคลมซ้ำอีกหรือไม่?`,
+        )
+      )
+        return
+    }
+    setClaimOrder(order)
   }
 
   async function doClaim(claimType: string, claimDetails: string) {
