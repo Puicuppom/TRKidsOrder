@@ -9,6 +9,7 @@ const PackingPage = lazy(() => import('./features/packing/PackingPage'))
 const ProductsPage = lazy(() => import('./features/products/ProductsPage'))
 const PatternsPage = lazy(() => import('./features/patterns/PatternsPage'))
 const PlannerPage = lazy(() => import('./features/planner/PlannerPage'))
+const PlanPage = lazy(() => import('./features/plan/PlanPage'))
 const ReportsPage = lazy(() => import('./features/reports/ReportsPage'))
 const TransportPage = lazy(() => import('./features/transport/TransportPage'))
 const AccountingPage = lazy(() => import('./features/accounting/AccountingPage'))
@@ -63,6 +64,14 @@ export default function App() {
             element={
               <Suspense fallback={<Loading />}>
                 <PlannerPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="plan"
+            element={
+              <Suspense fallback={<Loading />}>
+                <PlanPage />
               </Suspense>
             }
           />
